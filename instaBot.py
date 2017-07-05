@@ -1,7 +1,10 @@
-import requests
+import requests, urllib
 
 APP_ACCESS_TOKEN = "1750509238.4720ee1.2a7d7a4b4d2b4688ba0d318d61a24d60"
 BASE_URL ='https://api.instagram.com/v1/'
+
+
+
 def self_info():
     request_url=(BASE_URL + "users/self/?access_token=%s") % (APP_ACCESS_TOKEN)
     print 'GET request url:%s' % (request_url)
@@ -16,6 +19,9 @@ def self_info():
             print 'User does not exist!'
     else:
         print 'Status code other than 200 received!'
+
+
+
 def get_user_id(insta_username):
     request_url = (BASE_URL + 'users/search?q=%s&access_token=%s') % (insta_username, APP_ACCESS_TOKEN)
     print 'GET request url:%s' % (request_url)
@@ -29,6 +35,7 @@ def get_user_id(insta_username):
     else:
         print 'Status code other than 200 received!'
         exit()
+
 
 
 def get_user_info(insta_username):
@@ -51,6 +58,8 @@ def get_user_info(insta_username):
     else:
         print 'Status code other than 200 received!'
 
+
+
 def get_own_post():
     request_url = (BASE_URL + 'users/self/media/recent/?access_token=%s') % (APP_ACCESS_TOKEN)
     print 'GET request url : %s' % (request_url)
@@ -58,11 +67,16 @@ def get_own_post():
 
     if own_media['meta']['code'] == 200:
         if len(own_media['data']):
-            return own_media['data'][0]['id']
+            image_name= own_media['data'][0]['id'] + ".jpeg"
+            image_url =  own_media['data'][0]["images"]["standard_resolution"]["url"]
+            urllib.urlretrieve(image_url, image_name)
+            print"your image has been downloaded"
         else:
             print 'Post does not exist!'
     else:
         print 'Status code other than 200 received!'
+
+
 
 def get_user_post(insta_username):
     user_id = get_user_id(insta_username)
@@ -75,22 +89,69 @@ def get_user_post(insta_username):
 
     if user_media['meta']['code'] == 200:
         if len(user_media['data']):
-            return user_media['data'][0]['id']
+            image_name = user_media['data'][0]['id'] + ".jpeg"
+            image_url = user_media['data'][0]["images"]["standard_resolution"]["url"]
+            urllib.urlretrieve(image_url, image_name)
 
         else:
             print 'Post does not exist!'
     else:
         print 'Status code other than 200 received!'
+def get_post_id(insta_username):
+    user_id = get_user_id(insta_username)
+    if user_id == None:
+        print 'User does not exist!'
+        exit()
+    request_url = (BASE_URL + 'users/%s/media/recent/?access_token=%s') % (user_id, APP_ACCESS_TOKEN)
+    print 'GET request url : %s' % (request_url)
+    user_media = requests.get(request_url).json()
+
+    if user_media['meta']['code'] == 200:
+        if len(user_media['data']):
+            return user_media['data'][0]['id']
+        else:
+            print 'There is no recent post of the user!'
+            exit()
+    else:
+        print 'Status code other than 200 received!'
+        exit()
+
+def like_a_post(insta_username):
+    media_id = get_post_id(insta_username)
+    request_url = (BASE_URL + 'media/%s/likes') % (media_id)
+    payload = {"access_token": APP_ACCESS_TOKEN}
+    print 'POST request url : %s' % (request_url)
+    post_a_like = requests.post(request_url, payload).json()
+    if post_a_like['meta']['code'] == 200:
+        print 'Like was successful!'
+    else:
+        print 'Your like was unsuccessful. Try again!'
+
+def post_a_comment(insta_username):
+    media_id = get_post_id(insta_username)
+    comment_text = raw_input("Your comment: ")
+    payload = {"access_token": APP_ACCESS_TOKEN, "text" : comment_text}
+    request_url = (BASE_URL + 'media/%s/comments') % (media_id)
+    print 'POST request url : %s' % (request_url)
+
+    make_comment = requests.post(request_url, payload).json()
+
+    if make_comment['meta']['code'] == 200:
+        print "Successfully added a new comment!"
+    else:
+        print "Unable to add comment. Try again!"
+
+
+
+
+
 
 def start_bot():
     while True:
         print '\n'
-        print 'Hey! Welcome to instaBot!'
-        print 'Here are your menu options:'
-        print "a.Get your own details\n"
-        print "b.Get details of a user by username\n"
-        print "c.Get your recent post\n"
-        print "d.Get recent post of any user\n"
+        print "Hey! Welcome to instaBot!\nHere are your menu options:\n" \
+              "a.Get your own details\n\nb.Get details of a user by username\n\n" \
+              "c.Get your recent post\n\nd.Get recent post of any user\ne.like a post\nf.comment on a post"
         choice = raw_input("Enter you choice: ")
         if choice == "a":
             self_info()
@@ -102,6 +163,13 @@ def start_bot():
         elif choice == "d":
             insta_username = raw_input("Enter the username of the user: ")
             get_user_post(insta_username)
+        elif choice == "e":
+            insta_username = raw_input("Enter the username of the user: ")
+            like_a_post(insta_username)
+        elif choice == "f":
+            insta_username = raw_input("Enter the username of the user: ")
+            post_a_comment(insta_username)
+
 start_bot()
 
 
