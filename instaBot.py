@@ -1,8 +1,16 @@
 import requests, urllib
-
+from paralleldots import set_api_key, get_api_key, sentiment
+import matplotlib.pyplot as plt
+a=[]
 APP_ACCESS_TOKEN = "1750509238.4720ee1.2a7d7a4b4d2b4688ba0d318d61a24d60"
 BASE_URL ='https://api.instagram.com/v1/'
 
+KEY= "6nkFU0DD6Ixi1KS7AVqE4ioyLUeG3vRLyFflDW15Oig"
+set_api_key("6nkFU0DD6Ixi1KS7AVqE4ioyLUeG3vRLyFflDW15Oig")
+get_api_key()
+Positive_sentiments = 0
+Negative_sentiments = 0
+Neutral_sentiments = 0
 
 
 def self_info():
@@ -26,7 +34,6 @@ def get_user_id(insta_username):
     request_url = (BASE_URL + 'users/search?q=%s&access_token=%s') % (insta_username, APP_ACCESS_TOKEN)
     print 'GET request url:%s' % (request_url)
     user_info = requests.get(request_url).json()
-
     if user_info['meta']['code'] == 200:
         if len(user_info['data']):
             return user_info['data'][0]['id']
@@ -46,7 +53,6 @@ def get_user_info(insta_username):
     request_url = (BASE_URL + 'users/%s?access_token=%s') % (user_id, APP_ACCESS_TOKEN)
     print 'GET request url :%s' % (request_url)
     user_info = requests.get(request_url).json()
-
     if user_info['meta']['code'] == 200:
         if len(user_info['data']):
             print 'Username:%s' % (user_info['data']['username'])
@@ -64,7 +70,6 @@ def get_own_post():
     request_url = (BASE_URL + 'users/self/media/recent/?access_token=%s') % (APP_ACCESS_TOKEN)
     print 'GET request url : %s' % (request_url)
     own_media = requests.get(request_url).json()
-
     if own_media['meta']['code'] == 200:
         if len(own_media['data']):
             image_name= own_media['data'][0]['id'] + ".jpeg"
@@ -86,7 +91,6 @@ def get_user_post(insta_username):
     request_url = (BASE_URL + 'users/%s/media/recent/?access_token=%s') % (user_id, APP_ACCESS_TOKEN)
     print 'GET request url : %s' % (request_url)
     user_media = requests.get(request_url).json()
-
     if user_media['meta']['code'] == 200:
         if len(user_media['data']):
             image_name = user_media['data'][0]['id'] + ".jpeg"
@@ -97,6 +101,9 @@ def get_user_post(insta_username):
             print 'Post does not exist!'
     else:
         print 'Status code other than 200 received!'
+
+
+
 def get_post_id(insta_username):
     user_id = get_user_id(insta_username)
     if user_id == None:
@@ -116,6 +123,8 @@ def get_post_id(insta_username):
         print 'Status code other than 200 received!'
         exit()
 
+
+
 def like_a_post(insta_username):
     media_id = get_post_id(insta_username)
     request_url = (BASE_URL + 'media/%s/likes') % (media_id)
@@ -126,6 +135,8 @@ def like_a_post(insta_username):
         print 'Like was successful!'
     else:
         print 'Your like was unsuccessful. Try again!'
+
+
 
 def post_a_comment(insta_username):
     media_id = get_post_id(insta_username)
@@ -143,6 +154,50 @@ def post_a_comment(insta_username):
 
 
 
+def get_the_comments(insta_username):
+    post_id = get_post_id(insta_username)
+    print "Get request URL:" + ((BASE_URL + "media/%s/comments?access_token=%s") % (post_id, APP_ACCESS_TOKEN))
+    comments = requests.get((BASE_URL + "media/%s/comments?access_token=%s") % (post_id, APP_ACCESS_TOKEN)).json()
+    for i, d in enumerate(comments["data"]):
+        print d["text"]
+        a.append(d["text"])
+    return a
+
+
+
+
+
+
+
+def pie_chart():
+    insta_username = raw_input("Enter the username: \n")
+    give_comments = get_the_comments(insta_username)
+    for i in give_comments:
+        sentiments = sentiment(str(i))
+        print sentiments["sentiment"]
+        if (sentiments["sentiment"] > 0.75):
+            print "Positive sentiments"
+            global Positive_sentiments
+            Positive_sentiments = Positive_sentiments + 1
+        elif (0.25 < sentiments["sentiment"] <= 0.75):
+            print "Neutral Sentiments"
+            global Neutral_sentiments
+            Neutral_sentiments = Neutral_sentiments + 1
+        else:
+            print "Negative Sentiments"
+            global Negative_sentiments
+            Negative_sentiments = Negative_sentiments + 1
+
+    labels = 'Positive Sentiments', 'Negative Sentiments', 'Neutral Sentiments'
+    sizes = [Positive_sentiments,Neutral_sentiments ,Negative_sentiments ]
+    explode = (0.1, 0.1, 0.1)  # only "explode" the 2nd slice (i.e. 'Hogs')
+
+    fig1, ax1 = plt.subplots()
+    ax1.pie(sizes, explode=explode, labels=labels, autopct='%1.1f%%',
+            shadow=True, startangle=90)
+    ax1.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
+
+    plt.show()
 
 
 
@@ -150,8 +205,9 @@ def start_bot():
     while True:
         print '\n'
         print "Hey! Welcome to instaBot!\nHere are your menu options:\n" \
-              "a.Get your own details\n\nb.Get details of a user by username\n\n" \
-              "c.Get your recent post\n\nd.Get recent post of any user\ne.like a post\nf.comment on a post"
+              "a.Get your own details\nb.Get details of a user by username\n" \
+              "c.Get your recent post\nd.Get recent post of any user\ne.like a post\nf.comment on a post\n" \
+              "g. Get the list of comments\nh. Sentimental"
         choice = raw_input("Enter you choice: ")
         if choice == "a":
             self_info()
@@ -169,7 +225,12 @@ def start_bot():
         elif choice == "f":
             insta_username = raw_input("Enter the username of the user: ")
             post_a_comment(insta_username)
+        elif choice == "g":
+            insta_username= raw_input("Enter the username of the user: ")
+            get_the_comments(insta_username)
+        elif choice == "h":
+            pie_chart()
+
+
 
 start_bot()
-
-
